@@ -28,7 +28,7 @@ fluent-bit:
       [SERVICE]
           Flush         5
           Daemon        Off
-          Log_Level     warn
+          Log_Level     info
           Parsers_File  parsers.conf
           HTTP_Server   On
           HTTP_Listen   0.0.0.0
@@ -41,10 +41,10 @@ fluent-bit:
           Tag               pdns.*
           Path              /var/log/containers/pdns*.log
           Parser            cri
-          DB                /var/log/flb_pdns.db
           Mem_Buf_Limit     5MB
           Skip_Long_Lines   On
           Refresh_Interval  10
+          Follow_Symlinks   On
 
     # ── Filters ──────────────────────────────────────────────────────────────
     filters: |
