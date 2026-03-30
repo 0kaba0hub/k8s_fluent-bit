@@ -91,7 +91,8 @@ fluent-bit:
     extract_zone.lua: |
       function extract_zone(tag, timestamp, record)
           local log = record["log"] or record["message"] or ""
-          local zone = string.match(log, "zone '([^']+)'")
+          -- Match both "zone 'foo'" and "zone: 'foo'" formats
+          local zone = string.match(log, "zone:? '([^']+)'")
           if zone then
               -- Remove trailing dot from zone name
               zone = zone:gsub("%.$", "")
