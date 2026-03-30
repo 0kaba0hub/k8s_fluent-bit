@@ -1,0 +1,10 @@
+apiVersion: v2
+name: fluent-bit-wrapper
+description: Fluent Bit log collector for microk8s — forwards pdns logs to Loki
+type: application
+version: 0.1.0
+appVersion: "5.0.0"
+dependencies:
+  - name: fluent-bit
+    version: 0.57.0
+    repository: https://fluent.github.io/helm-charts
