@@ -44,7 +44,6 @@ fluent-bit:
           Mem_Buf_Limit     5MB
           Skip_Long_Lines   On
           Refresh_Interval  10
-          Follow_Symlinks   On
 
     # ── Filters ──────────────────────────────────────────────────────────────
     filters: |
