@@ -59,12 +59,6 @@ fluent-bit:
           K8S-Logging.Parser  On
           K8S-Logging.Exclude Off
 
-      # Extract zone name from pdns log message using regex
-      [FILTER]
-          Name    modify
-          Match   pdns.*
-          Condition Key_value_matches log .*zone '([^']+)'.*
-
       [FILTER]
           Name              lua
           Match             pdns.*
