@@ -45,6 +45,15 @@ fluent-bit:
           Skip_Long_Lines   On
           Refresh_Interval  10
 
+      [INPUT]
+          Name              tail
+          Tag               relay.*
+          Path              /var/log/containers/relay-*.log
+          Parser            cri
+          Mem_Buf_Limit     5MB
+          Skip_Long_Lines   On
+          Refresh_Interval  10
+
     # ── Filters ──────────────────────────────────────────────────────────────
     filters: |
       [FILTER]
@@ -64,7 +73,24 @@ fluent-bit:
           script            /fluent-bit/scripts/extract_zone.lua
           call              extract_zone
 
-    # ── Output — Loki ────────────────────────────────────────────────────────
+      [FILTER]
+          Name                kubernetes
+          Match               relay.*
+          Kube_URL            https://kubernetes.default.svc:443
+          Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+          Merge_Log           On
+          Keep_Log            Off
+          K8S-Logging.Parser  On
+          K8S-Logging.Exclude Off
+
+      [FILTER]
+          Name              lua
+          Match             relay.*
+          script            /fluent-bit/scripts/extract_postfix.lua
+          call              extract_postfix
+
+    # ── Outputs — Loki ───────────────────────────────────────────────────────
     outputs: |
       [OUTPUT]
           Name                   loki
@@ -73,6 +99,17 @@ fluent-bit:
           Port                   3100
           Labels                 job=pdns, namespace=$kubernetes['namespace_name'], pod=$kubernetes['pod_name']
           Label_Keys             $zone
+          Auto_Kubernetes_Labels off
+          Line_Format            json
+          Remove_Keys            kubernetes, logtag
+
+      [OUTPUT]
+          Name                   loki
+          Match                  relay.*
+          Host                   loki.monitoring.svc.cluster.local
+          Port                   3100
+          Labels                 job=relay, namespace=$kubernetes['namespace_name'], container=$kubernetes['container_name']
+          Label_Keys             $status
           Auto_Kubernetes_Labels off
           Line_Format            json
           Remove_Keys            kubernetes, logtag
@@ -86,7 +123,7 @@ fluent-bit:
           Time_Key    time
           Time_Format %b %d %H:%M:%S
 
-  # Lua script to extract zone name from pdns log message
+  # Lua scripts
   luaScripts:
     extract_zone.lua: |
       function extract_zone(tag, timestamp, record)
@@ -100,6 +137,28 @@ fluent-bit:
           else
               record["zone"] = "unknown"
           end
+          return 1, timestamp, record
+      end
+
+    extract_postfix.lua: |
+      function extract_postfix(tag, timestamp, record)
+          local log = record["log"] or record["message"] or ""
+
+          local process = string.match(log, "postfix/([^%[]+)%[")
+          if process then record["postfix_process"] = process end
+
+          local queue_id = string.match(log, "postfix/[^:]+%[%d+%]: ([A-F0-9]+): ")
+          if queue_id then record["queue_id"] = queue_id end
+
+          local status = string.match(log, "status=(%w+)")
+          record["status"] = status or "unknown"
+
+          local to = string.match(log, "to=<([^>]+)>")
+          if to then record["to"] = to end
+
+          local from = string.match(log, "from=<([^>]*)>")
+          if from then record["from"] = from end
+
           return 1, timestamp, record
       end
 
