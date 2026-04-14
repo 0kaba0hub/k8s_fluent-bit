@@ -120,6 +120,11 @@ fluent-bit:
           K8S-Logging.Parser  On
           K8S-Logging.Exclude Off
 
+      # nginx-ingress emits JSON access logs (see
+      # k8s_web/helm/templates/job-nginx-cf-logformat.yaml). The
+      # kubernetes filter's Merge_Log=On already parses the log field
+      # as JSON and hoists status/path/method/remote_addr/… to the
+      # root of the record — no explicit parser filter needed.
       [FILTER]
           Name                kubernetes
           Match               ingress.*
@@ -130,18 +135,6 @@ fluent-bit:
           Keep_Log            Off
           K8S-Logging.Parser  On
           K8S-Logging.Exclude Off
-
-      # Parse the JSON access log that nginx-ingress emits (see
-      # k8s_web/helm/templates/job-nginx-cf-logformat.yaml). Hoists
-      # status/path/method/remote_addr/… to the top level of the record
-      # so LogQL can use `| json` without nested parsing.
-      [FILTER]
-          Name         parser
-          Match        ingress.*
-          Key_Name     log
-          Parser       nginx_json
-          Reserve_Data On
-          Preserve_Key Off
 
     # ── Outputs — Loki ───────────────────────────────────────────────────────
     outputs: |
